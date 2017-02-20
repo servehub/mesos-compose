@@ -1,0 +1,79 @@
+version: '3'
+services:
+  zk.local:
+    image: zookeeper
+    network_mode: host
+
+  marathon.local:
+    image: mesosphere/marathon:v1.4.0-RC8
+    network_mode: host
+    environment:
+      MARATHON_MASTER: zk://127.0.0.1:2181/mesos
+      MARATHON_ZK: zk://127.0.0.1:2181/marathon
+      MARATHON_HOSTNAME: marathon.local
+    depends_on:
+      - zk.local
+    extra_hosts:
+     - moby:127.0.0.1
+     - mesos-slave-one.local:127.0.0.1
+     - mesos-slave-two.local:127.0.0.1
+
+  mesos.local:
+    image: mesosphere/mesos-master:1.1.1-rc1
+    network_mode: host
+    environment:
+      MESOS_ZK: zk://127.0.0.1:2181/mesos
+      MESOS_QUORUM: 1
+      MESOS_CLUSTER: master-local
+      MESOS_REGISTRY: replicated_log
+      MESOS_HOSTNAME: mesos.local
+    depends_on:
+      - zk.local
+
+  mesos-slave-one.local:
+    image: mesosphere/mesos-slave:1.1.1-rc1
+    network_mode: host
+    environment:
+      MESOS_MASTER: zk://127.0.0.1:2181/mesos
+      MESOS_CONTAINERIZERS: mesos,docker
+      MESOS_PORT: 5051
+      MESOS_RESOURCES: ports(*):[11000-11020]
+      MESOS_HOSTNAME: mesos-slave-one.local
+      MESOS_WORK_DIR: /tmp/mesos
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - mesos.local
+
+  mesos-slave-two.local:
+    image: mesosphere/mesos-slave:1.1.1-rc1
+    network_mode: host
+    environment:
+      MESOS_MASTER: zk://127.0.0.1:2181/mesos
+      MESOS_CONTAINERIZERS: mesos,docker
+      MESOS_PORT: 5052
+      MESOS_RESOURCES: ports(*):[12000-12020]
+      MESOS_HOSTNAME: mesos-slave-two.local
+      MESOS_WORK_DIR: /tmp/mesos
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - mesos-slave-one.local
+
+  consul.local:
+    image: consul
+    network_mode: host
+
+  docker-registrator:
+    image: gliderlabs/registrator
+    network_mode: host
+    command: -ip=127.0.0.1 consul://127.0.0.1:8500
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+
+  nginx-consul-serve:
+    image: kulikov/nginx-consul-serve
+    build: ./nginx-consul-serve
+    network_mode: host
