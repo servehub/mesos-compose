@@ -3,10 +3,12 @@ services:
   zk.local:
     image: zookeeper
     network_mode: host
+    restart: always
 
   marathon.local:
     image: mesosphere/marathon:v1.4.0-RC8
     network_mode: host
+    restart: always
     environment:
       MARATHON_MASTER: zk://127.0.0.1:2181/mesos
       MARATHON_ZK: zk://127.0.0.1:2181/marathon
@@ -21,6 +23,7 @@ services:
   mesos.local:
     image: mesosphere/mesos-master:1.1.1-rc1
     network_mode: host
+    restart: always
     environment:
       MESOS_ZK: zk://127.0.0.1:2181/mesos
       MESOS_QUORUM: 1
@@ -33,6 +36,7 @@ services:
   mesos-slave-one.local:
     image: mesosphere/mesos-slave:1.1.1-rc1
     network_mode: host
+    restart: always
     environment:
       MESOS_MASTER: zk://127.0.0.1:2181/mesos
       MESOS_CONTAINERIZERS: mesos,docker
@@ -49,6 +53,7 @@ services:
   mesos-slave-two.local:
     image: mesosphere/mesos-slave:1.1.1-rc1
     network_mode: host
+    restart: always
     environment:
       MESOS_MASTER: zk://127.0.0.1:2181/mesos
       MESOS_CONTAINERIZERS: mesos,docker
@@ -65,15 +70,22 @@ services:
   consul.local:
     image: consul
     network_mode: host
+    restart: always
 
   docker-registrator:
     image: gliderlabs/registrator
     network_mode: host
+    restart: always
     command: -ip=127.0.0.1 consul://127.0.0.1:8500
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock
+    depends_on:
+      - consul.local
 
   nginx-consul-serve:
     image: kulikov/nginx-consul-serve
     build: ./nginx-consul-serve
     network_mode: host
+    restart: always
+    depends_on:
+      - consul.local
