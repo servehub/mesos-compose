@@ -1,0 +1,19 @@
+{
+  "role": "travel",
+  "guarantee": [
+    {
+      "name": "cpus",
+      "type": "SCALAR",
+      "scalar": {
+        "value": 1
+      }
+    },
+    {
+      "name": "mem",
+      "type": "SCALAR",
+      "scalar": {
+        "value": 768
+      }
+    }
+  ]
+}

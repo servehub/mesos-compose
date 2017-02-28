@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 5s
+
+  external_labels:
+    monitor: 'codelab-monitor'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['prometheus-node-exporter.dev:9100']
+
+  - job_name: 'travel-tours'
+    static_configs:
+      - targets: ['tours.api.travel.dev']
+
+  - job_name: 'travel-mobile-api'
+    static_configs:
+      - targets: ['mobile.api.travel.dev']

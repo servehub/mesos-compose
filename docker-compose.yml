@@ -1,24 +1,42 @@
 version: '3'
 services:
-  zk.local:
+  zk.dev:
     image: zookeeper
     network_mode: host
     restart: always
 
-  marathon.local:
-    image: mesosphere/marathon:v1.4.0-RC8
+  travel.marathon.dev:
+    image: mesosphere/marathon:v1.4.1
     network_mode: host
     restart: always
     environment:
       MARATHON_MASTER: zk://127.0.0.1:2181/mesos
-      MARATHON_ZK: zk://127.0.0.1:2181/marathon
-      MARATHON_HOSTNAME: marathon.local
+      MARATHON_ZK: zk://127.0.0.1:2181/travel-marathon
+      MARATHON_HOSTNAME: travel.marathon.dev
+      MARATHON_HTTP_PORT: 8081
+      MARATHON_FRAMEWORK_NAME: travel
+      MARATHON_MESOS_ROLE: travel
       MARATHON_LOGGING_LEVEL: warn
     depends_on:
-      - zk.local
+      - zk.dev
 
-  mesos.local:
-    image: mesosphere/mesos-master:1.1.1-rc1
+  smart-reserve.marathon.dev:
+    image: mesosphere/marathon:v1.4.1
+    network_mode: host
+    restart: always
+    environment:
+      MARATHON_MASTER: zk://127.0.0.1:2181/mesos
+      MARATHON_ZK: zk://127.0.0.1:2181/smart-reserve-marathon
+      MARATHON_HOSTNAME: smart-reserve.marathon.dev
+      MARATHON_HTTP_PORT: 8082
+      MARATHON_FRAMEWORK_NAME: smart-reserve
+      MARATHON_MESOS_ROLE: smart-reserve
+      MARATHON_LOGGING_LEVEL: warn
+    depends_on:
+      - zk.dev
+
+  mesos.dev:
+    image: mesosphere/mesos-master:1.1.1-rc2
     network_mode: host
     restart: always
     environment:
@@ -26,48 +44,66 @@ services:
       MESOS_QUORUM: 1
       MESOS_CLUSTER: master-local
       MESOS_REGISTRY: replicated_log
-      MESOS_HOSTNAME: mesos.local
+      MESOS_HOSTNAME: mesos.dev
       MESOS_LOGGING_LEVEL: WARNING
     depends_on:
-      - zk.local
+      - zk.dev
 
-  mesos-slave-one.local:
-    image: mesosphere/mesos-slave:1.1.1-rc1
+  mesos-slave-one.dev:
+    image: mesosphere/mesos-slave:1.1.1-rc2
     network_mode: host
     restart: always
     environment:
       MESOS_MASTER: zk://127.0.0.1:2181/mesos
       MESOS_CONTAINERIZERS: mesos,docker
       MESOS_PORT: 5051
-      MESOS_RESOURCES: ports(*):[11000-11020]
-      MESOS_HOSTNAME: mesos-slave-one.local
+      MESOS_RESOURCES: ports(*):[11000-11100]
+      MESOS_HOSTNAME: mesos-slave-one.dev
       MESOS_WORK_DIR: /tmp/mesos
       MESOS_LOGGING_LEVEL: WARNING
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - mesos.local
+      - mesos.dev
 
-  mesos-slave-two.local:
-    image: mesosphere/mesos-slave:1.1.1-rc1
+  mesos-slave-two.dev:
+    image: mesosphere/mesos-slave:1.1.1-rc2
     network_mode: host
     restart: always
     environment:
       MESOS_MASTER: zk://127.0.0.1:2181/mesos
       MESOS_CONTAINERIZERS: mesos,docker
       MESOS_PORT: 5052
-      MESOS_RESOURCES: ports(*):[12000-12020]
-      MESOS_HOSTNAME: mesos-slave-two.local
+      MESOS_RESOURCES: ports(*):[12000-12100]
+      MESOS_HOSTNAME: mesos-slave-two.dev
       MESOS_WORK_DIR: /tmp/mesos
       MESOS_LOGGING_LEVEL: WARNING
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - mesos-slave-one.local
+      - mesos-slave-one.dev
 
-  consul.local:
+  mesos-slave-three.dev:
+    image: mesosphere/mesos-slave:1.1.1-rc2
+    network_mode: host
+    restart: always
+    environment:
+      MESOS_MASTER: zk://127.0.0.1:2181/mesos
+      MESOS_CONTAINERIZERS: mesos,docker
+      MESOS_PORT: 5053
+      MESOS_RESOURCES: ports(*):[13000-13100]
+      MESOS_HOSTNAME: mesos-slave-three.dev
+      MESOS_WORK_DIR: /tmp/mesos
+      MESOS_LOGGING_LEVEL: WARNING
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - mesos-slave-two.dev
+
+  consul.dev:
     image: consul
     network_mode: host
     restart: always
@@ -81,7 +117,7 @@ services:
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock
     depends_on:
-      - consul.local
+      - consul.dev
 
   nginx-consul-serve:
     image: kulikov/nginx-consul-serve
@@ -89,10 +125,37 @@ services:
     network_mode: host
     restart: always
     depends_on:
-      - consul.local
+      - consul.dev
+
+  grafana.dev:
+    image: grafana/grafana
+    network_mode: host
+    restart: always
+    environment:
+      GF_SERVER_ROOT_URL: http://grafana.dev:3000
+    volumes:
+      - ./grafana/:/var/lib/grafana
+
+  prometheus.dev:
+    image: quay.io/prometheus/prometheus
+    network_mode: host
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/:/prometheus
+
+  prometheus-node-exporter.dev:
+    image: quay.io/prometheus/node-exporter
+    network_mode: host
+    restart: always
+    command: "-collector.procfs /host/proc -collector.sysfs /host/sys"
+    volumes:
+      - /proc:/host/proc
+      - /sys:/host/sys
+      - /:/rootfs
 
   root-settings:
     image: alpine
-    command: /bin/sh -c "echo '172.17.0.1 moby zk.local marathon.local mesos.local mesos-slave-one.local mesos-slave-two.local' >> /vm-root/etc/hosts"
+    command: /bin/sh -c "echo '172.17.0.1 moby zk.dev smart-reserve.marathon.dev travel.marathon.dev marathon.dev mesos.dev mesos-slave-one.dev mesos-slave-two.dev mesos-slave-three.dev prometheus-node-exporter.dev' >> /vm-root/etc/hosts"
     volumes:
       - /:/vm-root
