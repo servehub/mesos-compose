@@ -4,17 +4,17 @@
     {
       "id": "every-minute",
       "enabled": true,
-      "cron": "* * * * *",
+      "cron": "*/5 * * * *",
       "concurrencyPolicy": "ALLOW"
     }
   ],
   "run": {
-    "cmd": "/bin/sh -c 'for i in {1..30}; do echo \"Run $i...\"; sleep 1; done'",
     "cpus": 0.1,
     "mem": 32,
     "disk": 128,
     "docker": {
-      "image": "alpine"
-    }
+      "image": "bash"
+    },
+    "cmd": "bash -c 'for i in {1..30}; do echo \"Run $i...\"; sleep 1; done'"
   }
 }
