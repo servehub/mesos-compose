@@ -9,4 +9,6 @@ COPY consul-template.conf /etc/consul/consul-template.conf
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY consul-nginx.ctmpl /etc/consul/consul-nginx.ctmpl
 
+VOLUME ["/data/nginx/cache"]
+
 CMD ["/usr/local/bin/consul-template", "-config", "/etc/consul/consul-template.conf"]

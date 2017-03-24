@@ -171,9 +171,16 @@ services:
   redis.dev:
     image: redis
     network_mode: host
+    restart: always
+
+#  etcd.dev:
+#    image: quay.io/coreos/etcd:v2.3.8
+#    network_mode: host
+#    restart: always
+#    command: "--advertise-client-urls 'http://127.0.0.1:2379' --listen-client-urls 'http://127.0.0.1:2379'"
 
   root-settings:
     image: alpine
-    command: /bin/sh -c "echo '172.17.0.1 moby zk.dev smart-reserve.marathon.dev metronome.dev travel.marathon.dev marathon.dev mesos.dev mesos-slave-one.dev mesos-slave-two.dev mesos-slave-three.dev prometheus-node-exporter.dev tours.api.travel.dev mobile.api.travel.dev travel.dev redis.dev' >> /vm-root/etc/hosts"
+    command: /bin/sh -c "echo '172.17.0.1 moby' >> /vm-root/etc/hosts"
     volumes:
       - /:/vm-root
